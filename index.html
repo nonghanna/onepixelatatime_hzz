@@ -364,7 +364,29 @@
     </section>
 </div>
 
-<script>
+<script type="module">
+    // 1. IMPORT FIREBASE SERVICES
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    // 2. YOUR FIREBASE CONFIG (Paste yours here)
+    const firebaseConfig = {
+        apiKey: "AIzaSyD9PizzvLFq2-zmoniU3daKDCA8TYilumM",
+        authDomain: "pixel-onepixelatatime2025-2029.firebaseapp.com",
+        projectId: "pixel-onepixelatatime2025-2029",
+        storageBucket: "pixel-onepixelatatime2025-2029.firebasestorage.app",
+        messagingSenderId: "576704182490",
+        appId: "1:576704182490:web:8069e4f9edf1a8f6834de3"
+        measurementId: "G-MPSRG3YESV"
+    };
+
+    // 3. INITIALIZE
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // 4. GLOBAL VARIABLES
     let currentRating = 0;
     let feedbackLog = [];
     let pending = [];
@@ -373,12 +395,35 @@
     let connectPosts = [];
     let capturedImages = [];
 
+    // 5. EXPOSE FUNCTIONS TO HTML
+    window.init = init;
+    window.toggleTheme = toggleTheme;
+    window.showPage = showPage;
+    window.toggleForm = toggleForm;
+    window.setRating = setRating;
+    window.submitFeedback = submitFeedback;
+    window.postStatus = postStatus;
+    window.queueLog = queueLog;
+    window.queueLearn = queueLearn;
+    window.checkAdmin = checkAdmin;
+    window.approve = approve;
+    window.reject = reject;
+    window.deleteLive = deleteLive;
+    window.handleSearch = handleSearch;
+    window.initCamera = initCamera;
+    window.startSession = startSession;
+    window.updateFrameStyle = updateFrameStyle;
+    window.postLensToConnect = postLensToConnect;
+    window.resetPlay = resetPlay;
+    window.startDeadlineGame = startDeadlineGame;
+    window.jump = jump;
+
+    // 6. THE REST OF YOUR FUNCTIONS...
     function init() {
         startCarousel();
         initBackground();
-        renderLiveContent();
+        // renderLiveContent(); 
     }
-
     function initBackground() {
         const b1 = document.getElementById('blob1');
         const b2 = document.getElementById('blob2');
