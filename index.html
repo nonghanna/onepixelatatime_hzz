@@ -365,10 +365,27 @@
 </div>
 
 <script type="module">
+    <script type="module">
     // 1. IMPORT FIREBASE SERVICES
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { 
+        getFirestore, 
+        collection, 
+        addDoc, 
+        getDocs, 
+        query, 
+        orderBy, 
+        onSnapshot, 
+        doc, 
+        updateDoc, 
+        deleteDoc 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { 
+        getStorage, 
+        ref, 
+        uploadBytes, 
+        getDownloadURL 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     // 2. YOUR FIREBASE CONFIG (Paste yours here)
     const firebaseConfig = {
@@ -417,13 +434,48 @@
     window.resetPlay = resetPlay;
     window.startDeadlineGame = startDeadlineGame;
     window.jump = jump;
+    
+    window.showPage = showPage;
+    window.toggleTheme = toggleTheme;
+    window.toggleForm = toggleForm;
+    window.setRating = setRating;
+    window.submitFeedback = submitFeedback;
+    window.postStatus = postStatus;
+    window.queueLog = queueLog;
+    window.queueLearn = queueLearn;
+    window.checkAdmin = checkAdmin;
+    window.approve = approve;
+    window.reject = reject;
+    window.deleteLive = deleteLive;
+    window.handleSearch = handleSearch;
+    window.initCamera = initCamera;
+    window.startSession = startSession;
+    window.updateFrameStyle = updateFrameStyle;
+    window.postLensToConnect = postLensToConnect;
+    window.resetPlay = resetPlay;
+    window.startDeadlineGame = startDeadlineGame;
+    window.jump = jump;
 
     // 6. THE REST OF YOUR FUNCTIONS...
     function init() {
-        startCarousel();
-        initBackground();
-        // renderLiveContent(); 
-    }
+    startCarousel();
+    initBackground();
+
+    // LISTEN FOR STATUS UPDATES (LexConnect)
+    onSnapshot(query(collection(db, "connect"), orderBy("timestamp", "desc")), (snapshot) => {
+        connectPosts = snapshot.docs.map(doc => doc.data());
+        renderConnect(); 
+    });
+
+    // LISTEN FOR BLOGS (LexLog)
+    onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc")), (snapshot) => {
+        const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        liveLogs = allLogs.filter(l => l.status === "approved");
+        pending = allLogs.filter(l => l.status === "pending");
+        renderLiveContent();
+        renderAdmin();
+    });
+}
     function initBackground() {
         const b1 = document.getElementById('blob1');
         const b2 = document.getElementById('blob2');
@@ -479,16 +531,29 @@
     }
 
     // --- LEXCONNECT ---
-    function postStatus() {
-        const name = document.getElementById('status-name').value || "Anonymous";
-        const text = document.getElementById('status-text').value;
-        const feeling = document.getElementById('feeling-select').value;
-        if(!text) return alert("Say something!");
+    async function postStatus() {
+    const name = document.getElementById('status-name').value || "Anonymous";
+    const text = document.getElementById('status-text').value;
+    const feeling = document.getElementById('feeling-select').value;
+
+    if(!text) return alert("Say something!");
+
+    try {
+        // This line sends the data to your Firebase 'connect' collection
+        await addDoc(collection(db, "connect"), {
+            name: name,
+            text: text,
+            feeling: feeling,
+            timestamp: Date.now(),
+            time: new Date().toLocaleString()
+        });
         
-        connectPosts.unshift({ name, text, feeling, time: 'Just now', type: 'text' });
-        renderConnect();
+        // Clear the input after sending
         document.getElementById('status-text').value = "";
+    } catch (e) {
+        console.error("Error adding document: ", e);
     }
+}
 
     function renderConnect() {
         const feed = document.getElementById('connect-feed');
