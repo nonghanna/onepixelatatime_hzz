@@ -167,7 +167,7 @@
                 <div class="carousel-container" id="welcome-carousel">
                     <div class="carousel-item active">
                         <h2 style="font-size: 2.2rem; color: var(--aero-blue);">LEXLOG</h2>
-                        <p>Share insights on different topics through blogs. Blog about anyhting, from legal management related topics to hobbies and personal interests.</p>
+                        <p>Share insights on different topics through blogs. Blog about anything, from legal management related topics to hobbies and personal interests.</p>
                     </div>
                     <div class="carousel-item">
                         <h2 style="font-size: 2.2rem; color: var(--aero-blue);">LEXCONNECT</h2>
@@ -256,7 +256,7 @@
     <section id="lexlearn" class="page">
         <div class="card">
             <h2>LEXLEARN</h2>
-            <input type="text" id="learn-search" placeholder="🔍 Search by subject..." oninput="renderLiveLearn(this.value)">
+            <input type="text" id="learn-search" placeholder="🔍 Search by subject..." oninput="handleSearch(this.value)">
             <button class="submit-btn" onclick="toggleForm('learn-form')">+ SUBMIT MATERIAL</button>
             <div id="learn-form" style="display:none; margin-top:15px;">
                 <input type="text" id="learn-name" placeholder="Your Name">
@@ -297,7 +297,7 @@
                     <button id="start-btn" class="submit-btn" style="width:100%;" onclick="startSession()" disabled>START SESSION</button>
                     
                     <div id="lens-actions" style="display:none; margin-top: 10px; gap: 10px;">
-                        <button class="submit-btn" style="flex:1; background: var(--aero-green); color: #333;" onclick="downloadStrip()">DOWNLOAD</button>
+                        <button class="submit-btn" style="flex:1; background: var(--aero-green); color: #333;" onclick="alert('Saving to browser...')">DOWNLOAD</button>
                         <button class="submit-btn" style="flex:1;" onclick="postLensToConnect()">POST TO FEED</button>
                     </div>
                 </div>
@@ -365,8 +365,6 @@
 </div>
 
 <script type="module">
-    <script type="module">
-    // 1. IMPORT FIREBASE SERVICES
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { 
         getFirestore, 
@@ -387,23 +385,20 @@
         getDownloadURL 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // 2. YOUR FIREBASE CONFIG (Paste yours here)
     const firebaseConfig = {
         apiKey: "AIzaSyD9PizzvLFq2-zmoniU3daKDCA8TYilumM",
         authDomain: "pixel-onepixelatatime2025-2029.firebaseapp.com",
         projectId: "pixel-onepixelatatime2025-2029",
         storageBucket: "pixel-onepixelatatime2025-2029.firebasestorage.app",
         messagingSenderId: "576704182490",
-        appId: "1:576704182490:web:8069e4f9edf1a8f6834de3"
+        appId: "1:576704182490:web:8069e4f9edf1a8f6834de3",
         measurementId: "G-MPSRG3YESV"
     };
 
-    // 3. INITIALIZE
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // 4. GLOBAL VARIABLES
     let currentRating = 0;
     let feedbackLog = [];
     let pending = [];
@@ -412,78 +407,34 @@
     let connectPosts = [];
     let capturedImages = [];
 
-    // 5. EXPOSE FUNCTIONS TO HTML
-    window.init = init;
-    window.toggleTheme = toggleTheme;
-    window.showPage = showPage;
-    window.toggleForm = toggleForm;
-    window.setRating = setRating;
-    window.submitFeedback = submitFeedback;
-    window.postStatus = postStatus;
-    window.queueLog = queueLog;
-    window.queueLearn = queueLearn;
-    window.checkAdmin = checkAdmin;
-    window.approve = approve;
-    window.reject = reject;
-    window.deleteLive = deleteLive;
-    window.handleSearch = handleSearch;
-    window.initCamera = initCamera;
-    window.startSession = startSession;
-    window.updateFrameStyle = updateFrameStyle;
-    window.postLensToConnect = postLensToConnect;
-    window.resetPlay = resetPlay;
-    window.startDeadlineGame = startDeadlineGame;
-    window.jump = jump;
-    
-    window.showPage = showPage;
-    window.toggleTheme = toggleTheme;
-    window.toggleForm = toggleForm;
-    window.setRating = setRating;
-    window.submitFeedback = submitFeedback;
-    window.postStatus = postStatus;
-    window.queueLog = queueLog;
-    window.queueLearn = queueLearn;
-    window.checkAdmin = checkAdmin;
-    window.approve = approve;
-    window.reject = reject;
-    window.deleteLive = deleteLive;
-    window.handleSearch = handleSearch;
-    window.initCamera = initCamera;
-    window.startSession = startSession;
-    window.updateFrameStyle = updateFrameStyle;
-    window.postLensToConnect = postLensToConnect;
-    window.resetPlay = resetPlay;
-    window.startDeadlineGame = startDeadlineGame;
-    window.jump = jump;
-
-    // 6. THE REST OF YOUR FUNCTIONS...
+    // --- INITIALIZATION ---
     function init() {
-    startCarousel();
-    initBackground();
+        startCarousel();
+        initBackground();
 
-    // LISTEN FOR STATUS UPDATES (LexConnect)
-    onSnapshot(query(collection(db, "connect"), orderBy("timestamp", "desc")), (snapshot) => {
-        connectPosts = snapshot.docs.map(doc => doc.data());
-        renderConnect(); 
-    });
+        onSnapshot(query(collection(db, "connect"), orderBy("timestamp", "desc")), (snapshot) => {
+            connectPosts = snapshot.docs.map(doc => doc.data());
+            renderConnect(); 
+        });
 
-    // LISTEN FOR BLOGS (LexLog)
-    onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc")), (snapshot) => {
-        const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        liveLogs = allLogs.filter(l => l.status === "approved");
-        pending = allLogs.filter(l => l.status === "pending");
-        renderLiveContent();
-        renderAdmin();
-    });
-}
+        onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc")), (snapshot) => {
+            const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            liveLogs = allItems.filter(l => l.status === "approved" && l.type === 'log');
+            liveLearn = allItems.filter(l => l.status === "approved" && l.type === 'learn');
+            pending = allItems.filter(l => l.status === "pending");
+            renderLiveContent();
+            renderAdmin();
+        });
+    }
+
     function initBackground() {
         const b1 = document.getElementById('blob1');
         const b2 = document.getElementById('blob2');
         window.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth) * 100;
             const y = (e.clientY / window.innerHeight) * 100;
-            b1.style.transform = `translate(${x/2}%, ${y/2}%)`;
-            b2.style.transform = `translate(${-x/2}%, ${-y/2}%)`;
+            if(b1) b1.style.transform = `translate(${x/2}%, ${y/2}%)`;
+            if(b2) b2.style.transform = `translate(${-x/2}%, ${-y/2}%)`;
         });
     }
 
@@ -532,31 +483,25 @@
 
     // --- LEXCONNECT ---
     async function postStatus() {
-    const name = document.getElementById('status-name').value || "Anonymous";
-    const text = document.getElementById('status-text').value;
-    const feeling = document.getElementById('feeling-select').value;
-
-    if(!text) return alert("Say something!");
-
-    try {
-        // This line sends the data to your Firebase 'connect' collection
-        await addDoc(collection(db, "connect"), {
-            name: name,
-            text: text,
-            feeling: feeling,
-            timestamp: Date.now(),
-            time: new Date().toLocaleString()
-        });
-        
-        // Clear the input after sending
-        document.getElementById('status-text').value = "";
-    } catch (e) {
-        console.error("Error adding document: ", e);
+        const name = document.getElementById('status-name').value || "Anonymous";
+        const text = document.getElementById('status-text').value;
+        const feeling = document.getElementById('feeling-select').value;
+        if(!text) return alert("Say something!");
+        try {
+            await addDoc(collection(db, "connect"), {
+                name: name,
+                text: text,
+                feeling: feeling,
+                timestamp: Date.now(),
+                time: new Date().toLocaleString()
+            });
+            document.getElementById('status-text').value = "";
+        } catch (e) { console.error(e); }
     }
-}
 
     function renderConnect() {
         const feed = document.getElementById('connect-feed');
+        if(!feed) return;
         feed.innerHTML = connectPosts.map(p => `
             <div class="card" style="background:white; color:#333; margin-top:15px;">
                 <strong>${p.name}</strong> ${p.feeling ? `is feeling ${p.feeling}` : ''}
@@ -567,30 +512,38 @@
         `).join('');
     }
 
-    // --- CONTENT SUBMISSION ---
-    function queueLog() {
-        pending.push({ 
-            type: 'log', 
-            writer: document.getElementById('writer').value || "Anonymous", 
-            title: document.getElementById('title').value || "Untitled", 
-            content: document.getElementById('content').value,
-            id: Date.now()
-        });
-        renderAdmin(); toggleForm('submission-form');
+    // --- CONTENT QUEUEING ---
+    async function queueLog() {
+        try {
+            await addDoc(collection(db, "logs"), { 
+                type: 'log', 
+                status: 'pending',
+                writer: document.getElementById('writer').value || "Anonymous", 
+                title: document.getElementById('title').value || "Untitled", 
+                content: document.getElementById('content').value,
+                timestamp: Date.now()
+            });
+            alert("Sent for approval!");
+            toggleForm('submission-form');
+        } catch(e) { console.error(e); }
     }
 
-    function queueLearn() {
-        pending.push({ 
-            type: 'learn', 
-            writer: document.getElementById('learn-name').value || "Anonymous", 
-            subject: document.getElementById('learn-subject').value || "General", 
-            materialType: document.getElementById('learn-type').value,
-            id: Date.now()
-        });
-        renderAdmin(); toggleForm('learn-form');
+    async function queueLearn() {
+        try {
+            await addDoc(collection(db, "logs"), { 
+                type: 'learn', 
+                status: 'pending',
+                writer: document.getElementById('learn-name').value || "Anonymous", 
+                subject: document.getElementById('learn-subject').value || "General", 
+                materialType: document.getElementById('learn-type').value,
+                timestamp: Date.now()
+            });
+            alert("Sent for approval!");
+            toggleForm('learn-form');
+        } catch(e) { console.error(e); }
     }
 
-    // --- ADMIN LOGIC ---
+    // --- ADMIN ---
     function checkAdmin() {
         if(document.getElementById('admin-pass').value === "PiXEL_Admin_1991435_0b11111101101") {
             document.getElementById('admin-auth').style.display='none';
@@ -599,151 +552,88 @@
         } else alert("Access Denied");
     }
 
-    function approve(id) {
-        const idx = pending.findIndex(p => p.id === id);
-        const item = pending.splice(idx, 1)[0];
-        if (item.type === 'log') liveLogs.unshift(item);
-        else liveLearn.unshift(item);
-        renderAdmin(); renderLiveContent();
-    }
-
-    function reject(id) {
-        pending = pending.filter(p => p.id !== id);
-        renderAdmin();
-    }
-
-    function deleteLive(id, type) {
-        if(type === 'log') liveLogs = liveLogs.filter(l => l.id !== id);
-        else liveLearn = liveLearn.filter(l => l.id !== id);
-        renderAdmin(); renderLiveContent();
-    }
+    async function approve(id) { await updateDoc(doc(db, "logs", id), { status: 'approved' }); }
+    async function reject(id) { await deleteDoc(doc(db, "logs", id)); }
+    async function deleteLive(id) { await deleteDoc(doc(db, "logs", id)); }
 
     function renderAdmin() {
         const pList = document.getElementById('pending-list');
+        if(!pList) return;
         pList.innerHTML = pending.length ? pending.map(p => `
             <div class="admin-item">
                 <strong>[${p.type.toUpperCase()}] ${p.title || p.subject}</strong> by ${p.writer}<br>
-                <small>${p.content || p.materialType || ""}</small><br>
-                <button class="submit-btn" style="padding:5px 10px; margin-top:5px;" onclick="approve(${p.id})">Approve</button>
-                <button class="submit-btn" style="padding:5px 10px; background:#ff4757;" onclick="reject(${p.id})">Reject</button>
+                <button class="submit-btn" style="padding:5px 10px; margin-top:5px;" onclick="approve('${p.id}')">Approve</button>
+                <button class="submit-btn" style="padding:5px 10px; background:#ff4757;" onclick="reject('${p.id}')">Reject</button>
             </div>`).join('') : "No pending items.";
 
-        const adminLogFeed = document.getElementById('admin-live-logs');
-        adminLogFeed.innerHTML = liveLogs.length ? liveLogs.map(l => `
-            <div class="admin-item">
-                <strong>${l.title}</strong> by ${l.writer}<br>
-                <button class="submit-btn" style="padding:5px 10px; background:#ff4757; margin-top:5px;" onclick="deleteLive(${l.id}, 'log')">Delete Post</button>
-            </div>`).join('') : "No live logs.";
+        document.getElementById('admin-live-logs').innerHTML = liveLogs.map(l => `
+            <div class="admin-item"><strong>${l.title}</strong> <button onclick="deleteLive('${l.id}')">Delete</button></div>`).join('');
+        
+        document.getElementById('admin-live-learn').innerHTML = liveLearn.map(m => `
+            <div class="admin-item"><strong>${m.subject}</strong> <button onclick="deleteLive('${m.id}')">Delete</button></div>`).join('');
 
-        const adminLearnFeed = document.getElementById('admin-live-learn');
-        adminLearnFeed.innerHTML = liveLearn.length ? liveLearn.map(m => `
-            <div class="admin-item">
-                <strong>${m.subject}</strong> (${m.materialType}) by ${m.writer}<br>
-                <button class="submit-btn" style="padding:5px 10px; background:#ff4757; margin-top:5px;" onclick="deleteLive(${m.id}, 'learn')">Delete Material</button>
-            </div>`).join('') : "No live materials.";
-
-        const fbList = document.getElementById('feedback-list');
-        fbList.innerHTML = feedbackLog.map(f => `
-            <div class="admin-item">
-                <strong>Rating: ${'★'.repeat(f.rating)}</strong> - <small>${f.time}</small><br>
-                <p>${f.comment}</p>
-            </div>`).join('') || "No feedback yet.";
+        document.getElementById('feedback-list').innerHTML = feedbackLog.map(f => `
+            <div class="admin-item"><strong>${'★'.repeat(f.rating)}</strong><p>${f.comment}</p></div>`).join('');
     }
 
     function renderLiveContent() {
-        const logFeed = document.getElementById('blog-feed');
-        logFeed.innerHTML = liveLogs.map(l => `
-            <div class="card" style="background:white; color:#333;">
-                <h3 style="margin:0;">${l.title}</h3>
-                <small>By ${l.writer}</small>
-                <p>${l.content}</p>
-            </div>`).join('');
-
-        const learnFeed = document.getElementById('learn-feed');
-        learnFeed.innerHTML = liveLearn.map(m => `
-            <div class="card" style="background:white; color:#333;">
-                <h3 style="margin:0;">${m.subject}</h3>
-                <p>Type: ${m.materialType} | Contributed by: ${m.writer}</p>
-            </div>`).join('');
+        document.getElementById('blog-feed').innerHTML = liveLogs.map(l => `
+            <div class="card" style="background:white; color:#333;"><h3>${l.title}</h3><small>${l.writer}</small><p>${l.content}</p></div>`).join('');
+        document.getElementById('learn-feed').innerHTML = liveLearn.map(m => `
+            <div class="card" style="background:white; color:#333;"><h3>${m.subject}</h3><p>${m.materialType} by ${m.writer}</p></div>`).join('');
     }
 
     function handleSearch(val) {
         const filtered = liveLogs.filter(l => l.title.toLowerCase().includes(val.toLowerCase()));
-        const logFeed = document.getElementById('blog-feed');
-        logFeed.innerHTML = filtered.map(l => `
-            <div class="card" style="background:white; color:#333;">
-                <h3 style="margin:0;">${l.title}</h3>
-                <p>${l.content}</p>
-            </div>`).join('');
+        document.getElementById('blog-feed').innerHTML = filtered.map(l => `
+            <div class="card" style="background:white; color:#333;"><h3>${l.title}</h3><p>${l.content}</p></div>`).join('');
     }
 
-    // --- LEXLENS CAMERA LOGIC ---
+    // --- PHOTOBOOTH ---
     async function initCamera() {
         const v = document.getElementById('video');
-        const overlay = document.getElementById('camera-overlay');
-        const startBtn = document.getElementById('start-btn');
         try { 
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             v.srcObject = stream;
-            overlay.style.display = 'none';
-            startBtn.disabled = false;
-        } catch(e) {
-            alert("Camera access denied or not available.");
-        }
+            document.getElementById('camera-overlay').style.display = 'none';
+            document.getElementById('start-btn').disabled = false;
+        } catch(e) { alert("Camera error."); }
     }
 
     async function startSession() {
-        const startBtn = document.getElementById('start-btn');
-        const actions = document.getElementById('lens-actions');
-        startBtn.disabled = true;
         capturedImages = [];
-        
         for(let i=0; i<4; i++){
-            // Visual Countdown
-            document.getElementById(`s${i}`).innerHTML = `<div style="font-size:2rem; font-weight:bold; color:var(--aero-blue)">...</div>`;
+            document.getElementById(`s${i}`).innerHTML = `<div style="font-size:2rem;">...</div>`;
             await new Promise(r=>setTimeout(r,1500));
-            
             const canvas = document.createElement('canvas');
             canvas.width=640; canvas.height=480;
             const ctx = canvas.getContext('2d');
             ctx.translate(640, 0); ctx.scale(-1, 1);
             ctx.drawImage(document.getElementById('video'), 0, 0);
-            
             const imgData = canvas.toDataURL('image/jpeg');
             capturedImages.push(imgData);
             document.getElementById(`s${i}`).innerHTML = `<img src="${imgData}">`;
         }
-        
-        startBtn.disabled = false;
-        startBtn.innerText = "RETAKE SESSION";
-        actions.style.display = 'flex';
+        document.getElementById('lens-actions').style.display = 'flex';
     }
 
     function updateFrameStyle() {
-        const color = document.getElementById('frame-color-select').value;
-        document.getElementById('preview-strip').style.backgroundColor = color;
+        document.getElementById('preview-strip').style.backgroundColor = document.getElementById('frame-color-select').value;
         document.getElementById('footer-text').innerText = document.getElementById('footer-text-input').value;
     }
 
-    function postLensToConnect() {
-        // Simple simulation: in a real app, we'd composite the strip into one image first
-        // For now, we'll post the last photo as a 'memory'
-        if(capturedImages.length === 0) return;
-        connectPosts.unshift({ 
-            name: "LexLens User", 
-            text: `Captured a new memory: ${document.getElementById('footer-text-input').value}`, 
-            image: capturedImages[3], 
-            time: 'Just now' 
-        });
-        alert("Posted to LexConnect!");
-        showPage('lexconnect');
-        renderConnect();
-    }
-
-    function downloadStrip() {
-        alert("Preparing your strip for download...");
-        // In a real browser environment, you'd use a library like html2canvas 
-        // to turn the #preview-strip div into a single image.
+    async function postLensToConnect() {
+        if(capturedImages.length < 4) return;
+        try {
+            await addDoc(collection(db, "connect"), {
+                name: "LexLens",
+                text: "New Photostrip!",
+                image: capturedImages[3],
+                timestamp: Date.now(),
+                time: new Date().toLocaleString()
+            });
+            showPage('lexconnect');
+        } catch(e) { console.error(e); }
     }
 
     // --- GAMES ---
@@ -811,6 +701,32 @@
         document.getElementById('wordle-container').style.display='none';
         document.getElementById('back-to-menu').style.display='none';
     }
+
+    // --- GLOBAL EXPORTS ---
+    window.init = init;
+    window.toggleTheme = toggleTheme;
+    window.showPage = showPage;
+    window.toggleForm = toggleForm;
+    window.setRating = setRating;
+    window.submitFeedback = submitFeedback;
+    window.postStatus = postStatus;
+    window.queueLog = queueLog;
+    window.queueLearn = queueLearn;
+    window.checkAdmin = checkAdmin;
+    window.approve = approve;
+    window.reject = reject;
+    window.deleteLive = deleteLive;
+    window.handleSearch = handleSearch;
+    window.initCamera = initCamera;
+    window.startSession = startSession;
+    window.updateFrameStyle = updateFrameStyle;
+    window.postLensToConnect = postLensToConnect;
+    window.startDeadlineGame = startDeadlineGame;
+    window.startWordle = startWordle;
+    window.submitWord = submitWord;
+    window.jump = jump;
+    window.resetPlay = resetPlay;
+
 </script>
 </body>
 </html>
