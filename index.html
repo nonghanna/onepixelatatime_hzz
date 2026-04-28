@@ -8,6 +8,7 @@
     <style>
         :root {
             --aero-blue: #3aace2;
+            --lex-purple: #6e3594;
             --aero-green: #90ee90;
             --gloss-border: rgba(255, 255, 255, 0.8);
             --bg-base: #ffffff;
@@ -63,7 +64,7 @@
         header { padding: 40px 10px 10px; text-align: center; position: relative; }
         .theme-toggle { position: absolute; top: 20px; right: 20px; }
         
-        .main-title { font-family: var(--font-accent); font-size: 3.5rem; font-weight: 700; color: var(--aero-blue); letter-spacing: -2px; }
+        .main-title { font-family: var(--font-accent); font-size: 3.5rem; font-weight: 700; color: var(--lex-purple); letter-spacing: -2px; }
         .flipped { transform: scaleX(-1); display: inline-block; }
 
         nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
@@ -192,6 +193,21 @@
             20% { opacity: 1; }
             100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
         }
+
+        /* NEW: CODE BREAKER CSS STYLES */
+        #cb-container { display: none; text-align: center; margin-top: 20px; }
+        .cb-board { display: flex; flex-direction: column-reverse; gap: 10px; margin-bottom: 20px; align-items: center; }
+        .cb-row { display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 15px; }
+        .cb-pegs { display: flex; gap: 8px; }
+        .cb-peg { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); background: #eee; }
+        .cb-hints { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+        .cb-hint { width: 10px; height: 10px; border-radius: 50%; background: #ccc; border: 1px solid rgba(0,0,0,0.1); }
+        .cb-controls { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .cb-picker { display: flex; gap: 10px; }
+        .cb-color-btn { width: 35px; height: 35px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: 0.2s; }
+        .cb-color-btn.active { border-color: var(--text-color); transform: scale(1.1); }
+        .hint-red { background: #ff4757; } /* Right color, right spot */
+        .hint-white { background: #ffffff; } /* Right color, wrong spot */
     </style>
 </head>
 <body onload="init()">
@@ -407,6 +423,30 @@
                 <input type="text" id="wordle-input" maxlength="5" placeholder="Type 5 letters..." onkeyup="if(event.key==='Enter') submitWord()" style="width: 200px; text-align: center;">
                 <p id="wordle-msg" style="margin-top:10px; font-weight:bold;"></p>
             </div>
+
+            <div id="cb-container">
+                <h3>Guess the 4-Color Code</h3>
+                <div id="cb-board-display" class="cb-board"></div>
+                
+                <div class="cb-controls">
+                    <div id="cb-current-guess" class="cb-pegs">
+                        <div class="cb-peg" onclick="cbSelectSlot(0)"></div>
+                        <div class="cb-peg" onclick="cbSelectSlot(1)"></div>
+                        <div class="cb-peg" onclick="cbSelectSlot(2)"></div>
+                        <div class="cb-peg" onclick="cbSelectSlot(3)"></div>
+                    </div>
+                    <div class="cb-picker">
+                        <div class="cb-color-btn" style="background:#ff4757" onclick="cbPickColor('#ff4757')"></div>
+                        <div class="cb-color-btn" style="background:#3aace2" onclick="cbPickColor('#3aace2')"></div>
+                        <div class="cb-color-btn" style="background:#90ee90" onclick="cbPickColor('#90ee90')"></div>
+                        <div class="cb-color-btn" style="background:#f1c40f" onclick="cbPickColor('#f1c40f')"></div>
+                        <div class="cb-color-btn" style="background:#9b59b6" onclick="cbPickColor('#9b59b6')"></div>
+                        <div class="cb-color-btn" style="background:#e67e22" onclick="cbPickColor('#e67e22')"></div>
+                    </div>
+                    <button class="submit-btn" onclick="cbSubmitGuess()">CHECK CODE</button>
+                </div>
+            </div>
+
             <button id="back-to-menu" class="submit-btn" style="display:none; margin-top:20px;" onclick="resetPlay()">Menu</button>
         </div>
     </section>
@@ -866,6 +906,92 @@
         return false;
     }
 
+    // --- NEW: CODE BREAKER LOGIC ---
+    let cbSecret = [], cbCurrentGuess = [null, null, null, null], cbActiveSlot = 0, cbHistory = [];
+    const cbColors = ['#ff4757', '#3aace2', '#90ee90', '#f1c40f', '#9b59b6', '#e67e22'];
+
+    function startCodeBreaker() {
+        document.getElementById('game-menu').style.display='none';
+        document.getElementById('cb-container').style.display='block';
+        document.getElementById('back-to-menu').style.display='block';
+        cbSecret = Array(4).fill().map(() => cbColors[Math.floor(Math.random() * cbColors.length)]);
+        cbHistory = [];
+        cbCurrentGuess = [null, null, null, null];
+        cbActiveSlot = 0;
+        document.getElementById('cb-board-display').innerHTML = "";
+        cbUpdateCurrentRow();
+    }
+
+    function cbSelectSlot(idx) {
+        cbActiveSlot = idx;
+        cbUpdateCurrentRow();
+    }
+
+    function cbPickColor(color) {
+        cbCurrentGuess[cbActiveSlot] = color;
+        if(cbActiveSlot < 3) cbActiveSlot++;
+        cbUpdateCurrentRow();
+    }
+
+    function cbUpdateCurrentRow() {
+        const slots = document.querySelectorAll('#cb-current-guess .cb-peg');
+        slots.forEach((s, i) => {
+            s.style.background = cbCurrentGuess[i] || '#eee';
+            s.style.borderColor = (i === cbActiveSlot) ? 'var(--aero-blue)' : 'rgba(0,0,0,0.1)';
+        });
+    }
+
+    function cbSubmitGuess() {
+        if(cbCurrentGuess.includes(null)) return alert("Fill all slots!");
+        
+        // Calculate Hints
+        let secretCopy = [...cbSecret];
+        let guessCopy = [...cbCurrentGuess];
+        let redHints = 0, whiteHints = 0;
+
+        // Check for Red (Perfect Match)
+        for(let i=0; i<4; i++) {
+            if(guessCopy[i] === secretCopy[i]) {
+                redHints++;
+                secretCopy[i] = guessCopy[i] = null;
+            }
+        }
+        // Check for White (Wrong Spot)
+        for(let i=0; i<4; i++) {
+            if(guessCopy[i] && secretCopy.includes(guessCopy[i])) {
+                whiteHints++;
+                secretCopy[secretCopy.indexOf(guessCopy[i])] = null;
+            }
+        }
+
+        // Add to Board History
+        const row = document.createElement('div');
+        row.className = 'cb-row';
+        row.innerHTML = `
+            <div class="cb-pegs">
+                ${cbCurrentGuess.map(c => `<div class="cb-peg" style="background:${c}"></div>`).join('')}
+            </div>
+            <div class="cb-hints">
+                ${Array(redHints).fill('<div class="cb-hint hint-red"></div>').join('')}
+                ${Array(whiteHints).fill('<div class="cb-hint hint-white"></div>').join('')}
+                ${Array(4 - (redHints + whiteHints)).fill('<div class="cb-hint"></div>').join('')}
+            </div>
+        `;
+        document.getElementById('cb-board-display').appendChild(row);
+
+        if(redHints === 4) {
+            alert("CODE BROKEN! You win!");
+            resetPlay();
+        } else if(document.querySelectorAll('.cb-row').length >= 10) {
+            alert("Out of turns! The code was hidden.");
+            resetPlay();
+        }
+
+        cbCurrentGuess = [null, null, null, null];
+        cbActiveSlot = 0;
+        cbUpdateCurrentRow();
+    }
+
     function startDeadlineGame() {
         document.getElementById('game-menu').style.display='none';
         document.getElementById('game-stage').style.display='block';
@@ -988,6 +1114,7 @@
         document.getElementById('wordle-container').style.display='none';
         document.getElementById('hto-container').style.display='none';
         document.getElementById('c4-container').style.display='none';
+        document.getElementById('cb-container').style.display='none'; /* NEW: Reset Code Breaker Visibility */
         document.getElementById('back-to-menu').style.display='none';
         document.getElementById('hto-start-btn').style.display='inline-block';
         document.getElementById('hto-fact-display').innerText="READY?";
@@ -1021,6 +1148,10 @@
     window.resetPlay = resetPlay;
     window.toggleAdminPreview = toggleAdminPreview; 
     window.startConnect4 = startConnect4;
+    window.startCodeBreaker = startCodeBreaker;
+    window.cbSelectSlot = cbSelectSlot;
+    window.cbPickColor = cbPickColor;
+    window.cbSubmitGuess = cbSubmitGuess;
 
 </script>
 </body>
