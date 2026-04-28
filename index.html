@@ -208,6 +208,25 @@
         .cb-color-btn.active { border-color: var(--text-color); transform: scale(1.1); }
         .hint-red { background: #ff4757; } /* Right color, right spot */
         .hint-white { background: #ffffff; } /* Right color, wrong spot */
+
+        /* --- START DAMATH CSS --- */
+        #damath-container { display: none; text-align: center; margin-top: 20px; }
+        .damath-board { display: grid; grid-template-columns: repeat(8, 45px); grid-template-rows: repeat(8, 45px); gap: 2px; background: #444; padding: 5px; border-radius: 10px; width: fit-content; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 4px solid var(--lex-purple); }
+        .damath-tile { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; position: relative; }
+        .tile-light { background: #fdfdfd; color: #ccc; }
+        .tile-dark { background: #3aace2; color: white; }
+        .tile-selected { border: 2px solid yellow; box-sizing: border-box; }
+        .damath-piece { width: 35px; height: 35px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; position: relative; z-index: 2; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .piece-p1 { background: white; color: var(--lex-purple); }
+        .piece-p2 { background: var(--lex-purple); color: white; }
+        .piece-king { border-width: 4px; border-color: #f1c40f; }
+        .damath-stats { margin-top: 15px; display: flex; justify-content: space-around; font-weight: bold; font-size: 1.1rem; }
+        /* --- END DAMATH CSS --- */
+
+        /* --- START TRY AGAIN SCREEN CSS --- */
+        .try-again-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column; align-items: center; justify-content: center; border-radius: 25px; color: white; animation: fadeIn 0.3s; }
+        .try-again-overlay h2 { margin-bottom: 15px; color: #ff4757; }
+        /* --- END TRY AGAIN SCREEN CSS --- */
     </style>
 </head>
 <body onload="init()">
@@ -387,8 +406,17 @@
     </section>
 
     <section id="lexplay" class="page">
-        <div class="card">
+        <div class="card" style="position: relative;">
             <h2>LEXPLAY</h2>
+
+            <div id="play-try-again" class="try-again-overlay">
+                <h2 id="try-again-msg">GAME OVER</h2>
+                <p id="try-again-score" style="margin-bottom: 20px;"></p>
+                <div style="display: flex; gap: 10px;">
+                    <button id="retry-btn" class="submit-btn" style="background: var(--aero-green); color:#333;">TRY AGAIN</button>
+                    <button class="submit-btn" onclick="resetPlay()">QUIT</button>
+                </div>
+            </div>
             <div id="game-menu" class="game-menu-grid">
                 <div class="game-card" onclick="startDeadlineGame()">🏃‍♂️ Avoid the Deadline</div>
                 <div class="game-card" onclick="startWordle()">🔤 Guess the Word</div>
@@ -447,6 +475,16 @@
                 </div>
             </div>
 
+            <div id="damath-container">
+                <p id="damath-turn" style="font-weight: bold; color: var(--lex-purple);">P1 (WHITE) - Your Turn</p>
+                <div id="damath-board" class="damath-board"></div>
+                <div class="damath-stats">
+                    <div>P1: <span id="damath-p1-score">0</span></div>
+                    <div>P2: <span id="damath-p2-score">0</span></div>
+                </div>
+                <p id="damath-last-move" style="font-size: 0.8rem; opacity: 0.7; margin-top: 10px;"></p>
+                <button class="submit-btn" onclick="startDaMath()">Restart Board</button>
+            </div>
             <button id="back-to-menu" class="submit-btn" style="display:none; margin-top:20px;" onclick="resetPlay()">Menu</button>
         </div>
     </section>
@@ -459,6 +497,13 @@
                 <button class="submit-btn" onclick="checkAdmin()">Enter</button>
             </div>
             <div id="admin-content" style="display:none;">
+                
+                <div id="flagged-section" class="admin-section" style="background: rgba(255, 71, 87, 0.1); border: 2px solid #ff4757; padding: 15px; border-radius: 20px;">
+                    <h3 style="color: #ff4757;">🚨 FLAGGED CONTENT</h3>
+                    <p style="font-size:0.8rem;">Automated system flagged these for review (Inappropriate keywords).</p>
+                    <div id="flagged-list"></div>
+                </div>
+                <hr>
                 <div class="admin-section">
                     <h3>🕒 PENDING APPROVALS</h3>
                     <p style="font-size:0.8rem; opacity:0.6;">Click title to read full content</p>
@@ -532,7 +577,7 @@
         initBubbles();
 
         onSnapshot(query(collection(db, "connect"), orderBy("timestamp", "desc")), (snapshot) => {
-            connectPosts = snapshot.docs.map(doc => doc.data());
+            connectPosts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
             renderConnect(); 
         });
 
@@ -624,19 +669,33 @@
         renderAdmin();
     }
 
+    // --- START FLAGGING SYSTEM LOGIC ---
+    const BANNED_WORDS = ["fuck", "shit", "bitch", "cunt", "sex", "porn", "pota", "gago"]; // Example list
+
+    function checkContent(text) {
+        const lower = text.toLowerCase();
+        return BANNED_WORDS.some(w => lower.includes(w));
+    }
+    // --- END FLAGGING SYSTEM LOGIC ---
+
     // --- LEXCONNECT ---
     async function postStatus() {
         const name = document.getElementById('status-name').value || "Anonymous";
         const text = document.getElementById('status-text').value;
         const feeling = document.getElementById('feeling-select').value;
         if(!text) return alert("Say something!");
+        
+        // Flagging check
+        const isFlagged = checkContent(text) || checkContent(name);
+
         try {
             await addDoc(collection(db, "connect"), {
                 name: name,
                 text: text,
                 feeling: feeling,
                 timestamp: Date.now(),
-                time: new Date().toLocaleString()
+                time: new Date().toLocaleString(),
+                flagged: isFlagged
             });
             document.getElementById('status-text').value = "";
         } catch (e) { console.error(e); }
@@ -645,7 +704,7 @@
     function renderConnect() {
         const feed = document.getElementById('connect-feed');
         if(!feed) return;
-        feed.innerHTML = connectPosts.map(p => `
+        feed.innerHTML = connectPosts.filter(p => !p.flagged).map(p => `
             <div class="card" style="background:white; color:#333; margin-top:15px;">
                 <strong>${p.name}</strong> ${p.feeling ? `is feeling ${p.feeling}` : ''}
                 <p>${p.text}</p>
@@ -657,14 +716,22 @@
 
     // --- CONTENT QUEUEING ---
     async function queueLog() {
+        const title = document.getElementById('title').value || "Untitled";
+        const content = document.getElementById('content').value;
+        const writer = document.getElementById('writer').value || "Anonymous";
+
+        // Flagging check
+        const isFlagged = checkContent(title) || checkContent(content) || checkContent(writer);
+
         try {
             await addDoc(collection(db, "logs"), { 
                 type: 'log', 
                 status: 'pending',
-                writer: document.getElementById('writer').value || "Anonymous", 
-                title: document.getElementById('title').value || "Untitled", 
-                content: document.getElementById('content').value,
-                timestamp: Date.now()
+                writer: writer, 
+                title: title, 
+                content: content,
+                timestamp: Date.now(),
+                flagged: isFlagged
             });
             alert("Sent for approval!");
             toggleForm('submission-form');
@@ -695,7 +762,6 @@
         } else alert("Access Denied");
     }
 
-    // Toggle Preview Logic
     function toggleAdminPreview(id) {
         const contentDiv = document.getElementById('preview-' + id);
         if(contentDiv) {
@@ -706,6 +772,7 @@
     async function approve(id) { await updateDoc(doc(db, "logs", id), { status: 'approved' }); }
     async function reject(id) { await deleteDoc(doc(db, "logs", id)); }
     async function deleteLive(id) { await deleteDoc(doc(db, "logs", id)); }
+    async function deleteFlagged(collectionName, id) { await deleteDoc(doc(db, collectionName, id)); }
 
     function renderAdmin() {
         const pList = document.getElementById('pending-list');
@@ -737,6 +804,22 @@
 
         document.getElementById('feedback-list').innerHTML = feedbackLog.map(f => `
             <div class="admin-item"><strong>${'★'.repeat(f.rating)}</strong><p>${f.comment}</p></div>`).join('');
+
+        // Render Flagged Content
+        const flaggedList = document.getElementById('flagged-list');
+        const flaggedLogs = pending.filter(p => p.flagged);
+        const flaggedConnect = connectPosts.filter(p => p.flagged);
+        
+        flaggedList.innerHTML = [...flaggedLogs.map(f => `
+            <div class="admin-item" style="border-left: 4px solid red;">
+                <b>LOG: ${f.title}</b> by ${f.writer}<br><i>"${f.content}"</i>
+                <button onclick="deleteFlagged('logs', '${f.id}')">Wipe</button>
+            </div>`), 
+            ...flaggedConnect.map(c => `
+            <div class="admin-item" style="border-left: 4px solid red;">
+                <b>CONNECT: ${c.name}</b><br><i>"${c.text}"</i>
+                <button onclick="deleteFlagged('connect', '${c.id}')">Wipe</button>
+            </div>`)].join('') || "No flagged content detected.";
     }
 
     function renderLiveContent() {
@@ -836,6 +919,17 @@
     const htoTimes = ["at 9:45 AM", "illegally", "during lunch", "in the rain", "at midnight"];
     let htoSequence = [], htoPlayerIdx = 0;
 
+    // --- TRY AGAIN LOGIC ---
+    function showTryAgain(msg, currentScore, retryFunc) {
+        document.getElementById('play-try-again').style.display = 'flex';
+        document.getElementById('try-again-msg').innerText = msg;
+        document.getElementById('try-again-score').innerText = currentScore !== null ? "Result: " + currentScore : "";
+        document.getElementById('retry-btn').onclick = () => {
+            document.getElementById('play-try-again').style.display = 'none';
+            retryFunc();
+        };
+    }
+
     // --- CONNECT 4 ENGINE ---
     let c4Board = [], c4Turn = 1, c4GameOver = false;
     const PIECE_1 = "#3aace2"; // Aero Blue
@@ -875,7 +969,8 @@
                 if(checkC4Win(r, c)) {
                     renderC4();
                     c4GameOver = true;
-                    document.getElementById('c4-status').innerText = (c4Turn === 1 ? "BLUE" : "GREEN") + " WINS!";
+                    const winner = (c4Turn === 1 ? "BLUE" : "GREEN");
+                    showTryAgain(winner + " WINS!", null, startConnect4);
                     return;
                 }
                 c4Turn = c4Turn === 1 ? 2 : 1;
@@ -906,7 +1001,7 @@
         return false;
     }
 
-    // --- NEW: CODE BREAKER LOGIC ---
+    // --- CODE BREAKER LOGIC ---
     let cbSecret = [], cbCurrentGuess = [null, null, null, null], cbActiveSlot = 0, cbHistory = [];
     const cbColors = ['#ff4757', '#3aace2', '#90ee90', '#f1c40f', '#9b59b6', '#e67e22'];
 
@@ -944,19 +1039,16 @@
     function cbSubmitGuess() {
         if(cbCurrentGuess.includes(null)) return alert("Fill all slots!");
         
-        // Calculate Hints
         let secretCopy = [...cbSecret];
         let guessCopy = [...cbCurrentGuess];
         let redHints = 0, whiteHints = 0;
 
-        // Check for Red (Perfect Match)
         for(let i=0; i<4; i++) {
             if(guessCopy[i] === secretCopy[i]) {
                 redHints++;
                 secretCopy[i] = guessCopy[i] = null;
             }
         }
-        // Check for White (Wrong Spot)
         for(let i=0; i<4; i++) {
             if(guessCopy[i] && secretCopy.includes(guessCopy[i])) {
                 whiteHints++;
@@ -964,7 +1056,6 @@
             }
         }
 
-        // Add to Board History
         const row = document.createElement('div');
         row.className = 'cb-row';
         row.innerHTML = `
@@ -980,11 +1071,9 @@
         document.getElementById('cb-board-display').appendChild(row);
 
         if(redHints === 4) {
-            alert("CODE BROKEN! You win!");
-            resetPlay();
+            showTryAgain("CODE BROKEN! YOU WIN!", null, startCodeBreaker);
         } else if(document.querySelectorAll('.cb-row').length >= 10) {
-            alert("Out of turns! The code was hidden.");
-            resetPlay();
+            showTryAgain("OUT OF TURNS!", "Code was hidden.", startCodeBreaker);
         }
 
         cbCurrentGuess = [null, null, null, null];
@@ -996,7 +1085,8 @@
         document.getElementById('game-menu').style.display='none';
         document.getElementById('game-stage').style.display='block';
         document.getElementById('back-to-menu').style.display='block';
-        gameOn=true; score=0; spawn();
+        gameOn=true; score=0; document.getElementById('score-board').innerText="0";
+        spawn();
     }
     function jump() { 
         let p=document.getElementById('player'); 
@@ -1013,7 +1103,10 @@
             pos += 6; o.style.right = pos+"px";
             if(pos > 1100) { score++; document.getElementById('score-board').innerText=score; clearInterval(loop); o.remove(); spawn(); }
             let pr=document.getElementById('player').getBoundingClientRect(), or=o.getBoundingClientRect();
-            if(pr.right>or.left && pr.left<or.right && pr.bottom>or.top) { gameOn=false; alert("Score: "+score); resetPlay(); }
+            if(pr.right>or.left && pr.left<or.right && pr.bottom>or.top) { 
+                gameOn=false; 
+                showTryAgain("DEADLINE CAUGHT YOU!", score, startDeadlineGame); 
+            }
         }, 20);
     }
 
@@ -1043,8 +1136,8 @@
             else if(wordleAnswer.includes(guess[i])) tile.classList.add('tile-present');
             else tile.classList.add('tile-absent');
         }
-        if(guess===wordleAnswer) { alert("Winner!"); resetPlay(); }
-        else if(currentGuessCount===5) { alert("Lost! Word was "+wordleAnswer); resetPlay(); }
+        if(guess===wordleAnswer) { showTryAgain("CORRECT!", wordleAnswer, startWordle); }
+        else if(currentGuessCount===5) { showTryAgain("FAILED!", "Word was " + wordleAnswer, startWordle); }
         currentGuessCount++; input.value="";
     }
 
@@ -1101,20 +1194,159 @@
                 if(f === htoSequence[htoPlayerIdx]) {
                     htoPlayerIdx++;
                     if(htoPlayerIdx === htoSequence.length) { alert("Verified!"); startHTORound(); }
-                } else { alert("Inconsistent Testimony!"); resetPlay(); }
+                } else { 
+                    showTryAgain("INCONSISTENT TESTIMONY!", "Round reached: " + htoSequence.length, startHTO); 
+                }
             };
             btns.appendChild(b);
         });
     }
 
+    // --- START DAMATH LOGIC ---
+    let damathGrid = [], damathP1Score = 0, damathP2Score = 0, damathTurn = 1, damathSelected = null;
+    const DM_SYMBOLS = ['+', '-', '×', '÷'];
+
+    function startDaMath() {
+        document.getElementById('game-menu').style.display='none';
+        document.getElementById('damath-container').style.display='block';
+        document.getElementById('back-to-menu').style.display='block';
+        
+        damathP1Score = 0; damathP2Score = 0; damathTurn = 1; damathSelected = null;
+        document.getElementById('damath-p1-score').innerText = "0";
+        document.getElementById('damath-p2-score').innerText = "0";
+        document.getElementById('damath-turn').innerText = "P1 (WHITE) - Your Turn";
+        
+        initDamathBoard();
+        renderDamath();
+    }
+
+    function initDamathBoard() {
+        damathGrid = Array(8).fill().map(() => Array(8).fill(null));
+        // P1 Pieces (Bottom)
+        let p1Vals = [1,3,5,7,0,2,4,6,9,11,8,10];
+        let pIdx = 0;
+        for(let r=7; r>=5; r--) {
+            for(let c=0; c<8; c++) {
+                if((r+c)%2 !== 0) damathGrid[r][c] = { player: 1, val: p1Vals[pIdx++], king: false };
+            }
+        }
+        // P2 Pieces (Top)
+        let p2Vals = [10,8,11,9,6,4,2,0,7,5,3,1];
+        pIdx = 0;
+        for(let r=0; r<=2; r++) {
+            for(let c=0; c<8; c++) {
+                if((r+c)%2 !== 0) damathGrid[r][c] = { player: 2, val: p2Vals[pIdx++], king: false };
+            }
+        }
+    }
+
+    function renderDamath() {
+        const board = document.getElementById('damath-board');
+        board.innerHTML = '';
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                const tile = document.createElement('div');
+                tile.className = `damath-tile ${(r+c)%2===0 ? 'tile-light' : 'tile-dark'}`;
+                if(damathSelected && damathSelected.r === r && damathSelected.c === c) tile.classList.add('tile-selected');
+                
+                // Add Math Symbol labels
+                if((r+c)%2 !== 0) {
+                    const sym = DM_SYMBOLS[(r+c) % 4];
+                    tile.innerHTML = `<span style="position:absolute; bottom:2px; right:2px; opacity:0.4;">${sym}</span>`;
+                }
+
+                const p = damathGrid[r][c];
+                if(p) {
+                    const pieceDiv = document.createElement('div');
+                    pieceDiv.className = `damath-piece piece-p${p.player} ${p.king ? 'piece-king' : ''}`;
+                    pieceDiv.innerText = p.val;
+                    tile.appendChild(pieceDiv);
+                }
+
+                tile.onclick = () => handleDamathClick(r, c);
+                board.appendChild(tile);
+            }
+        }
+    }
+
+    function handleDamathClick(r, c) {
+        const target = damathGrid[r][c];
+        
+        if(target && target.player === damathTurn) {
+            damathSelected = {r, c};
+            renderDamath();
+        } else if(damathSelected) {
+            const dr = r - damathSelected.r;
+            const dc = Math.abs(c - damathSelected.c);
+            const moveDir = damathTurn === 1 ? -1 : 1;
+
+            // Simple Move
+            if(dr === moveDir && dc === 1 && !target) {
+                executeDamathMove(damathSelected.r, damathSelected.c, r, c);
+            }
+            // Capture Move
+            else if(Math.abs(dr) === 2 && dc === 2 && !target) {
+                const midR = (r + damathSelected.r) / 2;
+                const midC = (c + damathSelected.c) / 2;
+                const victim = damathGrid[midR][midC];
+                if(victim && victim.player !== damathTurn) {
+                    calcDamathScore(damathGrid[damathSelected.r][damathSelected.c], victim, r, c);
+                    damathGrid[midR][midC] = null;
+                    executeDamathMove(damathSelected.r, damathSelected.c, r, c);
+                }
+            }
+        }
+    }
+
+    function calcDamathScore(attacker, victim, r, c) {
+        const sym = DM_SYMBOLS[(r+c) % 4];
+        let pts = 0;
+        if(sym === '+') pts = attacker.val + victim.val;
+        else if(sym === '-') pts = Math.abs(attacker.val - victim.val);
+        else if(sym === '×') pts = attacker.val * victim.val;
+        else if(sym === '÷') pts = victim.val !== 0 ? Math.floor(attacker.val / victim.val) : attacker.val;
+
+        if(damathTurn === 1) damathP1Score += pts; else damathP2Score += pts;
+        document.getElementById('damath-p1-score').innerText = damathP1Score;
+        document.getElementById('damath-p2-score').innerText = damathP2Score;
+        document.getElementById('damath-last-move').innerText = `Last Capture: ${attacker.val} ${sym} ${victim.val} = ${pts}`;
+    }
+
+    function executeDamathMove(sr, sc, tr, tc) {
+        let p = damathGrid[sr][sc];
+        damathGrid[tr][tc] = p;
+        damathGrid[sr][sc] = null;
+        
+        // Kinging
+        if((damathTurn === 1 && tr === 0) || (damathTurn === 2 && tr === 7)) p.king = true;
+
+        damathTurn = damathTurn === 1 ? 2 : 1;
+        damathSelected = null;
+        document.getElementById('damath-turn').innerText = damathTurn === 1 ? "P1 (WHITE) - Your Turn" : "P2 (PURPLE) - Opponent Turn";
+        renderDamath();
+        checkDamathWin();
+    }
+
+    function checkDamathWin() {
+        let p1Exists = false, p2Exists = false;
+        damathGrid.flat().forEach(p => { if(p?.player === 1) p1Exists = true; if(p?.player === 2) p2Exists = true; });
+        if(!p1Exists || !p2Exists) {
+            const winner = damathP1Score > damathP2Score ? "P1 WINS!" : "P2 WINS!";
+            showTryAgain(winner, `Final Score: ${damathP1Score} - ${damathP2Score}`, startDaMath);
+        }
+    }
+    // --- END DAMATH LOGIC ---
+
     function resetPlay() {
         gameOn=false;
+        document.getElementById('play-try-again').style.display = 'none';
         document.getElementById('game-menu').style.display='grid';
         document.getElementById('game-stage').style.display='none';
         document.getElementById('wordle-container').style.display='none';
         document.getElementById('hto-container').style.display='none';
         document.getElementById('c4-container').style.display='none';
-        document.getElementById('cb-container').style.display='none'; /* NEW: Reset Code Breaker Visibility */
+        document.getElementById('cb-container').style.display='none';
+        document.getElementById('damath-container').style.display='none'; // Added Damath reset
         document.getElementById('back-to-menu').style.display='none';
         document.getElementById('hto-start-btn').style.display='inline-block';
         document.getElementById('hto-fact-display').innerText="READY?";
@@ -1134,6 +1366,7 @@
     window.approve = approve;
     window.reject = reject;
     window.deleteLive = deleteLive;
+    window.deleteFlagged = deleteFlagged;
     window.handleSearch = handleSearch;
     window.initCamera = initCamera;
     window.startSession = startSession;
@@ -1152,6 +1385,7 @@
     window.cbSelectSlot = cbSelectSlot;
     window.cbPickColor = cbPickColor;
     window.cbSubmitGuess = cbSubmitGuess;
+    window.startDaMath = startDaMath;
 
 </script>
 </body>
