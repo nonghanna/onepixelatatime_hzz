@@ -118,11 +118,39 @@
         .strip-footer { text-align: center; font-family: var(--font-accent); font-weight: 700; padding-top: 10px; color: #333; font-size: 0.8rem; }
 
         /* Games */
-        .game-menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .game-menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
         .game-card { background: white; padding: 20px; border-radius: 20px; cursor: pointer; border: 1px solid #eee; text-align: center; color: #333; }
         #game-stage { background: var(--aero-blue); border-radius: 25px; height: 180px; position: relative; overflow: hidden; margin: 20px 0; border: 4px solid white; display: none; }
         #player { width: 30px; height: 30px; background: white; border-radius: 5px; position: absolute; bottom: 0; left: 50px; transition: bottom 0.3s; }
         .obstacle { width: 20px; height: 30px; background: #ff4757; position: absolute; bottom: 0; right: -50px; }
+
+        /* Connect 4 Board */
+        .c4-board { 
+            display: grid; 
+            grid-template-columns: repeat(7, 45px); 
+            gap: 8px; 
+            justify-content: center; 
+            background: var(--aero-blue); 
+            padding: 15px; 
+            border-radius: 20px; 
+            margin: 20px auto; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+            width: fit-content; 
+        }
+        .c4-slot { 
+            width: 45px; 
+            height: 45px; 
+            border-radius: 50%; 
+            background: white; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .c4-slot:hover { background: #f0f0f0; }
+        #c4-status { font-weight: bold; margin-top: 15px; font-size: 1.2rem; color: var(--text-color); }
 
         /* Hear Them Out Style */
         #hto-container { display: none; text-align: center; margin-top: 20px; color: #333; }
@@ -189,7 +217,6 @@
 </nav>
 
 <div class="container">
-    <!-- HOME PAGE -->
     <section id="home" class="page active">
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
             <div class="card" style="grid-column: span 3; text-align: center;">
@@ -240,7 +267,6 @@
         </div>
     </section>
 
-    <!-- LEXLOG PAGE -->
     <section id="lexlog" class="page">
         <div class="card">
             <h2>LEXLOG</h2>
@@ -261,7 +287,6 @@
         </div>
     </section>
 
-    <!-- LEXCONNECT PAGE -->
     <section id="lexconnect" class="page">
         <div class="card">
             <h2>LEXCONNECT</h2>
@@ -284,7 +309,6 @@
         </div>
     </section>
 
-    <!-- LEXLEARN PAGE -->
     <section id="lexlearn" class="page">
         <div class="card">
             <h2>LEXLEARN</h2>
@@ -302,7 +326,6 @@
         </div>
     </section>
 
-    <!-- LEXLENS PAGE -->
     <section id="lexlens" class="page">
         <div class="card">
             <h2>LEXLENS PHOTOBOOTH</h2>
@@ -347,7 +370,6 @@
         </div>
     </section>
 
-    <!-- LEXPLAY PAGE -->
     <section id="lexplay" class="page">
         <div class="card">
             <h2>LEXPLAY</h2>
@@ -355,16 +377,18 @@
                 <div class="game-card" onclick="startDeadlineGame()">🏃‍♂️ Avoid the Deadline</div>
                 <div class="game-card" onclick="startWordle()">🔤 Guess the Word</div>
                 <div class="game-card" onclick="startHTO()">👂 Hear Them Out</div>
-                <div class="game-card" onclick="startRISKSimulator()">🚨 RISK Simulator</div>
-                <div class="game-card" onclick="startConnect4()">🔵 Connect 4 U</div>
-                <div class="game-card" onclick="startTower()">👷‍♂️ Tower of Hanoi</div>
-                <div class="game-card" onclick="startRedvsBlue()">💈Red VS Blue</div>
-                <div class="game-card" onclick="start2048()">🔢 2048</div>
+                <div class="game-card" onclick="startConnect4()">🟡 Connect 4</div>
             </div>
             
             <div id="game-stage" onclick="jump()">
                 <div id="score-board" style="position:absolute; top:10px; right:20px; color:white; font-weight:bold;">0</div>
                 <div id="player"></div>
+            </div>
+
+            <div id="c4-container" style="display:none; text-align: center;">
+                <div class="c4-board" id="c4-board"></div>
+                <p id="c4-status">Blue's Turn</p>
+                <button class="submit-btn" onclick="startConnect4()">Restart Game</button>
             </div>
 
             <div id="hto-container">
@@ -381,11 +405,10 @@
                 <input type="text" id="wordle-input" maxlength="5" placeholder="Type 5 letters..." onkeyup="if(event.key==='Enter') submitWord()" style="width: 200px; text-align: center;">
                 <p id="wordle-msg" style="margin-top:10px; font-weight:bold;"></p>
             </div>
-            <button id="back-to-menu" class="submit-btn" style="display:none; margin-top:10px;" onclick="resetPlay()">Menu</button>
+            <button id="back-to-menu" class="submit-btn" style="display:none; margin-top:20px;" onclick="resetPlay()">Menu</button>
         </div>
     </section>
 
-    <!-- ADMIN PAGE -->
     <section id="admin-portal" class="page">
         <div class="card">
             <h2>ADMIN DASHBOARD</h2>
@@ -737,55 +760,109 @@
     // --- GAMES ---
     let gameOn = false, score = 0, wordleAnswer = "", currentGuessCount = 0;
     const legalWords = [
-    // --- LEGAL & ADMIN ---
-    "COURT", "LEGAL", "JUDGE", "ORDER", "BRIEF", "RULES", "CLAIM", "TRIAL", 
-    "ERROR", "FRAUD", "GUILT", "JUROR", "OATHS", "PLEAD", "PROOF", "TORTS", 
-    "WRITS", "VENUE", "TITLE", "TERMS", "SWORN", "SUITS", "STATE", "RIGHT",
-    "ASSET", "DEBTS", "DEEDS", "LEASE", "LIENS", "TAXES", "TRUST", "WAGES", 
+        "COURT", "LEGAL", "JUDGE", "ORDER", "BRIEF", "RULES", "CLAIM", "TRIAL", 
+        "ERROR", "FRAUD", "GUILT", "JUROR", "OATHS", "PLEAD", "PROOF", "TORTS", 
+        "WRITS", "VENUE", "TITLE", "TERMS", "SWORN", "SUITS", "STATE", "RIGHT",
+        "ASSET", "DEBTS", "DEEDS", "LEASE", "LIENS", "TAXES", "TRUST", "WAGES", 
+        "BOOKS", "STUDY", "GRADE", "EXAMS", "CLASS", "PAPER", "LEARN", "NOTES",
+        "TEACH", "WRITE", "LOGIC", "THINK", "STARK", "CLOCK", "BREAK", "MAJOR",
+        "MINOR", "COACH", "AWARD", "SLIDE", "ENTRY", "RECAP", "BOARD", "BRAIN",
+        "PAGES", "POINT", "QUIZ!", "PROFS", "TEAMS", "LUNCH", "DORMS",
+        "TABLE", "CHAIR", "LIGHT", "PLANT", "SHELF", "FLOOR", "PHONE", "GLASS", 
+        "SPOON", "KNIFE", "PLATE", "COUCH", "FRAME", "RADIO", "STOVE", "DRYER", 
+        "SHEET", "BLANK", "STAIR", "DOORS", "VASES", "LAMPS", "BRUSH", "TOWEL", 
+        "SOAPS", "AUDIO", "VIDEO", "CABLE", "WIRES", "PHOTO",
+        "OCEAN", "RIVER", "STORM", "CLOUD", "TREES", "GRASS", "STONE", "EARTH",
+        "FIELD", "BEACH", "FLAME", "WATER", "SOLAR", "SPACE", "MOONS", "PLUTO",
+        "FROST", "WOODS", "TRAIL", "MOUNT", "SANDS", "LAKES", "ROOTS", "WAVES",
+        "APPLE", "BREAD", "PIZZA", "PASTA", "SUGAR", "SPICE", "FRUIT", "CREAM",
+        "LEMON", "HONEY", "STEAK", "SNACK", "CANDY", "CAKES", "JUICE", "TASTY",
+        "SALAD", "FLOUR", "SOUPS", "MEALS", "FRESH", "PEARS", "BERRY", "ROAST",
+        "TRAIN", "PLANE", "TRUCK", "MOTOR", "PILOT", "ROUTE", "TRACK", "ROADS",
+        "MAPS!", "GLOBE", "WORLD", "CABIN", "COACH", "TIRES", "FLIGHT", "TRIPS",
+        "HOTEL", "PARKs", "SHIPS", "BIKES", "SPEED", "SHIFT", "DRIVE", "GUIDE",
+        "HAPPY", "PROUD", "BRAVE", "SMART", "KINDY", "CALMY", "CHILL", "FUNNY",
+        "READY", "LOYAL", "HONEST", "SHARP", "GREAT", "LUCKY", "SWEET", "TOUGH",
+        "QUIET", "BOLDY", "NOBLE", "MERRY", "FAIRY", "GRACE", "PEACE", "VIBES",
+        "PIXEL", "FOCUS", "DAILY", "LEVEL", "INPUT", "MEDIA", "STORY", "DREAM", 
+        "COURS", "MUSIC", "SOUND", "COLOR", "CLEAR", "POWER", "QUICK", "SMILE"
+    ];
 
-    // --- STUDENT LIFE ---
-    "BOOKS", "STUDY", "GRADE", "EXAMS", "CLASS", "PAPER", "LEARN", "NOTES",
-    "TEACH", "WRITE", "LOGIC", "THINK", "STARK", "CLOCK", "BREAK", "MAJOR",
-    "MINOR", "COACH", "AWARD", "SLIDE", "ENTRY", "RECAP", "BOARD", "BRAIN",
-    "PAGES", "POINT", "QUIZ!", "PROFS", "TEAMS", "LUNCH", "DORMS",
-
-    // --- HOME ITEMS ---
-    "TABLE", "CHAIR", "LIGHT", "PLANT", "SHELF", "FLOOR", "PHONE", "GLASS", 
-    "SPOON", "KNIFE", "PLATE", "COUCH", "FRAME", "RADIO", "STOVE", "DRYER", 
-    "SHEET", "BLANK", "STAIR", "DOORS", "VASES", "LAMPS", "BRUSH", "TOWEL", 
-    "SOAPS", "AUDIO", "VIDEO", "CABLE", "WIRES", "PHOTO",
-
-    // --- NATURE & ENVIRONMENT (New!) ---
-    "OCEAN", "RIVER", "STORM", "CLOUD", "TREES", "GRASS", "STONE", "EARTH",
-    "FIELD", "BEACH", "FLAME", "WATER", "SOLAR", "SPACE", "MOONS", "PLUTO",
-    "FROST", "WOODS", "TRAIL", "MOUNT", "SANDS", "LAKES", "ROOTS", "WAVES",
-
-    // --- FOOD & DINING (New!) ---
-    "APPLE", "BREAD", "PIZZA", "PASTA", "SUGAR", "SPICE", "FRUIT", "CREAM",
-    "LEMON", "HONEY", "STEAK", "SNACK", "CANDY", "CAKES", "JUICE", "TASTY",
-    "SALAD", "FLOUR", "SOUPS", "MEALS", "FRESH", "PEARS", "BERRY", "ROAST",
-
-    // --- TRAVEL & TRANSPORT (New!) ---
-    "TRAIN", "PLANE", "TRUCK", "MOTOR", "PILOT", "ROUTE", "TRACK", "ROADS",
-    "MAPS!", "GLOBE", "WORLD", "CABIN", "COACH", "TIRES", "FLIGHT", "TRIPS",
-    "HOTEL", "PARKs", "SHIPS", "BIKES", "SPEED", "SHIFT", "DRIVE", "GUIDE",
-
-    // --- EMOTIONS & TRAITS (New!) ---
-    "HAPPY", "PROUD", "BRAVE", "SMART", "KINDY", "CALMY", "CHILL", "FUNNY",
-    "READY", "LOYAL", "HONEST", "SHARP", "GREAT", "LUCKY", "SWEET", "TOUGH",
-    "QUIET", "BOLDY", "NOBLE", "MERRY", "FAIRY", "GRACE", "PEACE", "VIBES",
-
-    // --- OTHERS & PIXEL VIBES ---
-    "PIXEL", "FOCUS", "DAILY", "LEVEL", "INPUT", "MEDIA", "STORY", "DREAM", 
-    "COURS", "MUSIC", "SOUND", "COLOR", "CLEAR", "POWER", "QUICK", "SMILE"
-];
-
-    // Hear Them Out Data & Variables
     const htoSubjects = ["The CEO", "A white van", "The guard", "The plaintiff", "The HR manager"];
     const htoVerbs = ["signed the", "discarded a", "carried the", "photographed the", "locked the"];
     const htoObjects = ["notary seal", "digital drive", "briefcase", "secret file", "master key"];
     const htoTimes = ["at 9:45 AM", "illegally", "during lunch", "in the rain", "at midnight"];
     let htoSequence = [], htoPlayerIdx = 0;
+
+    // --- CONNECT 4 ENGINE ---
+    let c4Board = [], c4Turn = 1, c4GameOver = false;
+    const PIECE_1 = "#3aace2"; // Aero Blue
+    const PIECE_2 = "#90ee90"; // Aero Green
+
+    function startConnect4() {
+        document.getElementById('game-menu').style.display = 'none';
+        document.getElementById('back-to-menu').style.display = 'inline-block';
+        document.getElementById('c4-container').style.display = 'block';
+        c4Board = Array(6).fill().map(() => Array(7).fill(0));
+        c4Turn = 1;
+        c4GameOver = false;
+        document.getElementById('c4-status').innerText = "Blue's Turn";
+        renderC4();
+    }
+
+    function renderC4() {
+        const b = document.getElementById('c4-board');
+        b.innerHTML = '';
+        for(let r=0; r<6; r++) {
+            for(let c=0; c<7; c++) {
+                const s = document.createElement('div');
+                s.className = 'c4-slot';
+                if(c4Board[r][c] === 1) s.style.background = PIECE_1;
+                if(c4Board[r][c] === 2) s.style.background = PIECE_2;
+                s.onclick = () => dropPiece(c);
+                b.appendChild(s);
+            }
+        }
+    }
+
+    function dropPiece(c) {
+        if(c4GameOver) return;
+        for(let r=5; r>=0; r--) {
+            if(c4Board[r][c] === 0) {
+                c4Board[r][c] = c4Turn;
+                if(checkC4Win(r, c)) {
+                    renderC4();
+                    c4GameOver = true;
+                    document.getElementById('c4-status').innerText = (c4Turn === 1 ? "BLUE" : "GREEN") + " WINS!";
+                    return;
+                }
+                c4Turn = c4Turn === 1 ? 2 : 1;
+                document.getElementById('c4-status').innerText = (c4Turn === 1 ? "Blue" : "Green") + "'s Turn";
+                renderC4();
+                return;
+            }
+        }
+    }
+
+    function checkC4Win(r, c) {
+        const color = c4Board[r][c];
+        const directions = [[0,1], [1,0], [1,1], [1,-1]];
+        for(let [dr, dc] of directions) {
+            let count = 1;
+            for(let i=1; i<4; i++) {
+                let nr = r + dr*i, nc = c + dc*i;
+                if(nr>=0 && nr<6 && nc>=0 && nc<7 && c4Board[nr][nc] === color) count++;
+                else break;
+            }
+            for(let i=1; i<4; i++) {
+                let nr = r - dr*i, nc = c - dc*i;
+                if(nr>=0 && nr<6 && nc>=0 && nc<7 && c4Board[nr][nc] === color) count++;
+                else break;
+            }
+            if(count >= 4) return true;
+        }
+        return false;
+    }
 
     function startDeadlineGame() {
         document.getElementById('game-menu').style.display='none';
@@ -812,7 +889,6 @@
         }, 20);
     }
 
-    // Wordle Logic
     function startWordle() {
         document.getElementById('game-menu').style.display='none';
         document.getElementById('wordle-container').style.display='block';
@@ -844,7 +920,6 @@
         currentGuessCount++; input.value="";
     }
 
-    // Hear Them Out Logic
     function startHTO() {
         document.getElementById('game-menu').style.display='none';
         document.getElementById('hto-container').style.display='block';
@@ -910,6 +985,7 @@
         document.getElementById('game-stage').style.display='none';
         document.getElementById('wordle-container').style.display='none';
         document.getElementById('hto-container').style.display='none';
+        document.getElementById('c4-container').style.display='none';
         document.getElementById('back-to-menu').style.display='none';
         document.getElementById('hto-start-btn').style.display='inline-block';
         document.getElementById('hto-fact-display').innerText="READY?";
@@ -942,7 +1018,8 @@
     window.jump = jump;
     window.resetPlay = resetPlay;
     window.toggleAdminPreview = toggleAdminPreview; 
+    window.startConnect4 = startConnect4;
 
 </script>
 </body>
-</html> 
+</html>
